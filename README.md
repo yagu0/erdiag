@@ -5,7 +5,7 @@ Inspired by [this repository](https://code.google.com/archive/p/merisier/).
 This parser reads ER diagrams definition files, and produces two types of diagrams + SQL code.
 [Graphviz](https://www.graphviz.org/) is used on server side to translate parsed graph descriptions into SVG objects.
 
-*Note:* at the moment, only the conceptual graph is implemented, and no comments are allowed in textual descriptions.
+*Note:* at the moment only the conceptual graph is implemented, and no comments are allowed in textual descriptions.
 At least the former is planned, and also probably a way to indicate relative identifiers.
 
 -----
