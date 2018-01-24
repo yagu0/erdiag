@@ -12,20 +12,20 @@ At least the former is planned, and also probably a way to indicate relative ide
 
 An entity is defined as follow
 
-    [Entity]
-		#attr1 (*)
-		attr2 (*)
+	[Entity]
+	#attr1 (*)
+	attr2 (*)
 
 with (\*) = optional SQL indications, and # denoting a (part of) a key.
 
 A relationship is defined in this way
 
-    {Relation}
-		Entity C1
-		Entity2 C2
-    --
-		attr1 (*)
-		attr2 (*)
+	{Relation}
+	Entity C1
+	Entity2 C2
+	--
+	attr1 (*)
+	attr2 (*)
 
 where attributes are optional, and C1 (resp. C2) = cardinality for entity 1 (resp. 2).
 Defining relationships with more than two attributes is easy: just add entities.
@@ -47,9 +47,9 @@ The syntax for these two last is then the same as in the non-weak versions.
 
 To indicate an inheritance relation, proceed as follow
 
-    is_a
-		Animal Cat Fish
-		Planet Mars Venus
+	is_a
+	Animal Cat Fish
+	Planet Mars Venus
 
 Finally, blocks must be separated by new lines. For a usage example, see example.html (it should render as seen in example.svg)
 
