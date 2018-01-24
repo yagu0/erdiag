@@ -1,0 +1,33 @@
+<div id="test"></div>
+
+<script src="parser.js"></script>
+<script>
+	let er =
+		new ErDiags(`
+			[Musician]
+			#id (integer)
+			name
+			band
+			role (varchar not null)
+
+			[Instrument]
+			#name
+			family (varchar not null default "Brass")
+
+			[Piano]
+			type
+
+			[Guitar]
+			type
+
+			{Play}
+			Musician +
+			Instrument *
+			--
+			event
+
+			is_a
+			Instrument Piano Guitar
+		`);
+	er.drawMcd("test");
+</script>
