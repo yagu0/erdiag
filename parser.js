@@ -7,6 +7,7 @@ class ErDiags
 		this.inheritances = [];
 		this.associations = [];
 		this.txt2json(description);
+		this.tables = [];
 		// Cache SVG graphs returned by server (in addition to server cache = good perfs)
 		this.mcdGraph = "";
 		this.mldGraph = "";
@@ -268,9 +269,24 @@ class ErDiags
 			element.innerHTML = this.mcdGraph;
 			return;
 		}
-		//UNIMPLEMENTED
-		// TODO: analyze cardinalities (eat attributes, create new tables...)
-		// mldDot = ...
+		// Build dot graph input
+		let mldDot = 'graph {\n';
+		// Nodes:
+		Object.keys(this.entities).forEach( name => {
+			//mld. ... --> devient table
+			// mldDot = ...
+		});
+		// Relationships:
+		this.associations.forEach( a => {
+			a.entities.forEach( e => { // e.card e.name ...
+				// Pass 1 : entites deviennent tables
+				// Pass 2 : sur les assoces
+				// multi-arite : sub-loop si 0,1 ou 1,1 : aspiré comme attribut de l'association (phase 1)
+				// ensuite, que du 0,n ou 1,n : si == 1, OK une table
+				// si 2 ou + : n tables + 1 pour l'assoce, avec attrs clés étrangères
+				// clé étrangère NOT NULL si 1,1
+			});
+		});
 		// this.graphMld = ...
 	}
 
