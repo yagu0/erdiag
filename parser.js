@@ -16,7 +16,7 @@ class ErDiags
 
 	static get TYPES()
 	{
-		// SQLite types without null (TODO: be more general)
+		// SQLite storage classes without null
 		return ["integer","real","text","blob"];
 	}
 
@@ -67,7 +67,7 @@ class ErDiags
 		{
 			case '[':
 				// Entity = { name: { attributes, [weak] } }
-				let name = lines[start].match(/\w+/)[0];
+				let name = lines[start].match(/[^\[\]\s]+/)[0];
 				let entity = { attributes: this.parseAttributes(lines, start+1, end) };
 				if (lines[start].charAt(1) == '[')
 					entity.weak = true;
@@ -79,7 +79,7 @@ class ErDiags
 			case '{': //association
 				// Association = { [name], [attributes], [weak], entities: ArrayOf entity indices }
 				let relationship = { };
-				let nameRes = lines[start].match(/\w+/);
+				let nameRes = lines[start].match(/[^{}\s]+/);
 				if (nameRes !== null)
 					relationship.name = nameRes[0];
 				if (lines[start].charAt(1) == '{')
@@ -95,15 +95,20 @@ class ErDiags
 		let attributes = [];
 		for (let i=start; i<end; i++)
 		{
-			let field = { name: lines[i].match(/\w+/)[0] };
-			if (lines[i].charAt(0) == '#')
+			let field = { };
+			let line = lines[i];
+			if (line.charAt(0) == '#')
+			{
 				field.isKey = true;
-			let parenthesis = lines[i].match(/\((.+)\)/);
+				line = line.slice(1);
+			}
+			field.name = line.match(/[^()\s]+/)[0];
+			let parenthesis = line.match(/\((.+)\)/);
 			if (parenthesis !== null)
 			{
 				let sqlClues = parenthesis[1];
 				let qualifiers = sqlClues;
-				let firstWord = sqlClues.match(/\w+/)[0];
+				let firstWord = sqlClues.match(/[^\s]+/)[0];
 				if (ErDiags.TYPES.includes(firstWord))
 				{
 					field.type = firstWord;
@@ -257,7 +262,7 @@ class ErDiags
 		ErDiags.AjaxGet(mcdDot, graphSvg => {
 			this.mcdGraph = graphSvg;
 			element.innerHTML = graphSvg;
-		})
+		});
 	}
 
 	// "Modèle logique des données"
@@ -288,6 +293,11 @@ class ErDiags
 			});
 		});
 		// this.graphMld = ...
+		//console.log(mldDot);
+		ErDiags.AjaxGet(mldDot, graphSvg => {
+			this.mldGraph = graphSvg;
+			element.innerHTML = graphSvg;
+		});
 	}
 
 	fillSql(id)
