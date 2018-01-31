@@ -67,7 +67,7 @@ class ErDiags
 		{
 			case '[':
 				// Entity = { name: { attributes, [weak] } }
-				let name = lines[start].match(/[^\[\]\s]+/)[0];
+				let name = lines[start].match(/[^\[\]"\s]+/)[0];
 				let entity = { attributes: this.parseAttributes(lines, start+1, end) };
 				if (lines[start].charAt(1) == '[')
 					entity.weak = true;
@@ -79,7 +79,7 @@ class ErDiags
 			case '{': //association
 				// Association = { [name], [attributes], [weak], entities: ArrayOf entity indices }
 				let relationship = { };
-				let nameRes = lines[start].match(/[^{}\s]+/);
+				let nameRes = lines[start].match(/[^{}"\s]+/);
 				if (nameRes !== null)
 					relationship.name = nameRes[0];
 				if (lines[start].charAt(1) == '{')
@@ -102,7 +102,7 @@ class ErDiags
 				field.isKey = true;
 				line = line.slice(1);
 			}
-			field.name = line.match(/[^()\s]+/)[0];
+			field.name = line.match(/[^()"\s]+/)[0];
 			let parenthesis = line.match(/\((.+)\)/);
 			if (parenthesis !== null)
 			{
@@ -196,7 +196,7 @@ class ErDiags
 		_.shuffle(Object.keys(this.entities)).forEach( name => {
 			if (mcdStyle == "bubble")
 			{
-				mcdDot += name + '[shape=rectangle, label="' + name + '"';
+				mcdDot += '"' + name + '" [shape=rectangle, label="' + name + '"';
 				if (this.entities[name].weak)
 					mcdDot += ', peripheries=2';
 				mcdDot += '];\n';
@@ -205,17 +205,17 @@ class ErDiags
 					_.shuffle(this.entities[name].attributes).forEach( a => {
 						let label = (a.isKey ? '#' : '') + a.name;
 						let attrName = name + '_' + a.name;
-						mcdDot += attrName + '[shape=ellipse, label="' + label + '"];\n';
+						mcdDot += '"' + attrName + '" [shape=ellipse, label="' + label + '"];\n';
 						if (Math.random() < 0.5)
-							mcdDot += attrName + ' -- ' + name + ';\n';
+							mcdDot += '"' + attrName + '" -- "' + name + '";\n';
 						else
-							mcdDot += name + ' -- ' + attrName + ';\n';
+							mcdDot += '"' + name + '" -- "' + attrName + '";\n';
 					});
 				}
 			}
 			else
 			{
-				mcdDot += name + '[label=<';
+				mcdDot += '"' + name + '" [label=<';
 				if (this.entities[name].weak)
 				{
 					mcdDot += '<table port="name" BORDER="1" ALIGN="LEFT" CELLPADDING="0" CELLSPACING="3" CELLBORDER="0">' +
@@ -226,7 +226,7 @@ class ErDiags
 				mcdDot += '<tr><td BGCOLOR="#ae7d4e" BORDER="0"><font COLOR="#FFFFFF">' + name + '</font></td></tr>\n';
 				if (!!this.entities[name].attributes)
 				{
-					this.entities[name].attributes.forEach( a => {
+					_.shuffle(this.entities[name].attributes).forEach( a => {
 						let label = (a.isKey ? '<u>' : '') + a.name + (a.isKey ? '</u>' : '');
 						mcdDot += '<tr><td BGCOLOR="#FFFFFF" BORDER="0" ALIGN="LEFT"><font COLOR="#000000" >' + label + '</font></td></tr>\n';
 					});
@@ -238,13 +238,13 @@ class ErDiags
 			}
 		});
 		// Inheritances:
-		this.inheritances.forEach( i => {
+		_.shuffle(this.inheritances).forEach( i => {
 			_.shuffle(i.children).forEach( c => {
 				if (Math.random() < 0.5)
-					mcdDot += c + ':name -- ' + i.parent;
+					mcdDot += '"' + c + '":name -- "' + i.parent;
 				else
-					mcdDot += i.parent + ':name -- ' + c;
-				mcdDot += ':name [dir="forward", arrowhead="vee", style="dashed"];\n';
+					mcdDot += '"' + i.parent + '":name -- "' + c;
+				mcdDot += '":name [dir="forward", arrowhead="vee", style="dashed"];\n';
 			});
 		});
 		// Relationships:
@@ -253,27 +253,27 @@ class ErDiags
 			let name = !!a.name && a.name.length > 0
 				? a.name
 				: '_assoce' + assoceCounter++;
-			mcdDot += name + '[shape="diamond", style="filled", color="lightgrey", label="' + (!!a.name ? a.name : '') + '"';
+			mcdDot += '"' + name + '" [shape="diamond", style="filled", color="lightgrey", label="' + name + '"';
 			if (a.weak)
 				mcdDot += ', peripheries=2';
 			mcdDot += '];\n';
 			_.shuffle(a.entities).forEach( e => {
 				if (Math.random() < 0.5)
-					mcdDot += e.name + ':name -- ' + name;
+					mcdDot += '"' + e.name + '":name -- "' + name + '"';
 				else
-					mcdDot += name + ' -- ' + e.name + ':name';
+					mcdDot += '"' + name + '" -- "' + e.name + '":name';
 				mcdDot += '[label="' + ErDiags.CARDINAL[e.card] + '"];\n';
 			});
 			if (!!a.attributes)
 			{
 				_.shuffle(a.attributes).forEach( attr => {
 					let label = (attr.isKey ? '#' : '') + attr.name;
-					mcdDot += name + '_' + attr.name + '[shape=ellipse, label="' + label + '"];\n';
+					mcdDot += '"' + name + '_' + attr.name + '" [shape=ellipse, label="' + label + '"];\n';
 					let attrName = name + '_' + attr.name;
 					if (Math.random() < 0.5)
-						mcdDot += attrName + ' -- ' + name + ';\n';
+						mcdDot += '"' + attrName + '" -- "' + name + '";\n';
 					else
-						mcdDot += name + ' -- ' + attrName + ';\n';
+						mcdDot += '"' + name + '" -- "' + attrName + '";\n';
 				});
 			}
 		});
