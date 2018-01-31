@@ -202,7 +202,7 @@ class ErDiags
 				mcdDot += '];\n';
 				if (!!this.entities[name].attributes)
 				{
-					_.shuffle(this.entities[name].attributes).forEach( a => {
+					this.entities[name].attributes.forEach( a => {
 						let label = (a.isKey ? '#' : '') + a.name;
 						let attrName = name + '_' + a.name;
 						mcdDot += '"' + attrName + '" [shape=ellipse, label="' + label + '"];\n';
@@ -226,7 +226,7 @@ class ErDiags
 				mcdDot += '<tr><td BGCOLOR="#ae7d4e" BORDER="0"><font COLOR="#FFFFFF">' + name + '</font></td></tr>\n';
 				if (!!this.entities[name].attributes)
 				{
-					_.shuffle(this.entities[name].attributes).forEach( a => {
+					this.entities[name].attributes.forEach( a => {
 						let label = (a.isKey ? '<u>' : '') + a.name + (a.isKey ? '</u>' : '');
 						mcdDot += '<tr><td BGCOLOR="#FFFFFF" BORDER="0" ALIGN="LEFT"><font COLOR="#000000" >' + label + '</font></td></tr>\n';
 					});
@@ -266,7 +266,7 @@ class ErDiags
 			});
 			if (!!a.attributes)
 			{
-				_.shuffle(a.attributes).forEach( attr => {
+				a.attributes.forEach( attr => {
 					let label = (attr.isKey ? '#' : '') + attr.name;
 					mcdDot += '"' + name + '_' + attr.name + '" [shape=ellipse, label="' + label + '"];\n';
 					let attrName = name + '_' + attr.name;
