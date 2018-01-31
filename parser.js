@@ -261,7 +261,7 @@ class ErDiags
 				if (Math.random() < 0.5)
 					mcdDot += e.name + ':name -- ' + name;
 				else
-					mcdDot += name + ':name -- ' + e.name;
+					mcdDot += name + ' -- ' + e.name + ':name';
 				mcdDot += '[label="' + ErDiags.CARDINAL[e.card] + '"];\n';
 			});
 			if (!!a.attributes)
