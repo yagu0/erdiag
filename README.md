@@ -6,7 +6,9 @@ This parser reads ER diagrams definition files, and produces two types of diagra
 [Graphviz](https://www.graphviz.org/) is used on server side to translate parsed graph descriptions into SVG objects.
 
 *Note:* at the moment only the conceptual graph is implemented, and no comments are allowed in textual descriptions.
-At least the former is planned, and also probably a way to indicate relative identifiers.
+At least the former is planned, and also probably a way to indicate relative identifiers, and maybe links between relationships.
+
+*Note bis:* temporary dependency to [underscore](http://underscorejs.org/); good library but used so far only for its shuffle() method.
 
 -----
 

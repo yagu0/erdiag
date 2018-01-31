@@ -177,6 +177,7 @@ class ErDiags
 	}
 
 	// "Modèle conceptuel des données". TODO: option for graph size
+	// NOTE: randomizing helps to obtain better graphs (sometimes)
 	drawMcd(id, mcdStyle) //mcdStyle: bubble, or compact
 	{
 		let element = document.getElementById(id);
@@ -188,8 +189,11 @@ class ErDiags
 		}
 		// Build dot graph input
 		let mcdDot = 'graph {\n';
+		mcdDot += 'rankdir="LR";\n';
 		// Nodes:
-		Object.keys(this.entities).forEach( name => {
+		if (mcdStyle == "compact")
+			mcdDot += "node [shape=plaintext];\n";
+		_.shuffle(Object.keys(this.entities)).forEach( name => {
 			if (mcdStyle == "bubble")
 			{
 				mcdDot += name + '[shape=rectangle, label="' + name + '"';
@@ -198,16 +202,20 @@ class ErDiags
 				mcdDot += '];\n';
 				if (!!this.entities[name].attributes)
 				{
-					this.entities[name].attributes.forEach( a => {
+					_.shuffle(this.entities[name].attributes).forEach( a => {
 						let label = (a.isKey ? '#' : '') + a.name;
-						mcdDot += name + '_' + a.name + '[shape=ellipse, label="' + label + '"];\n';
-						mcdDot += name + '_' + a.name + ' -- ' + name + ';\n';
+						let attrName = name + '_' + a.name;
+						mcdDot += attrName + '[shape=ellipse, label="' + label + '"];\n';
+						if (Math.random() < 0.5)
+							mcdDot += attrName + ' -- ' + name + ';\n';
+						else
+							mcdDot += name + ' -- ' + attrName + ';\n';
 					});
 				}
 			}
 			else
 			{
-				mcdDot += name + '[shape=plaintext, label=<';
+				mcdDot += name + '[label=<';
 				if (this.entities[name].weak)
 				{
 					mcdDot += '<table port="name" BORDER="1" ALIGN="LEFT" CELLPADDING="0" CELLSPACING="3" CELLBORDER="0">' +
@@ -231,13 +239,17 @@ class ErDiags
 		});
 		// Inheritances:
 		this.inheritances.forEach( i => {
-			i.children.forEach( c => {
-				mcdDot += c + ':name -- ' + i.parent + ':name [len="1.00", dir="forward", arrowhead="vee", style="dashed"];\n';
+			_.shuffle(i.children).forEach( c => {
+				if (Math.random() < 0.5)
+					mcdDot += c + ':name -- ' + i.parent;
+				else
+					mcdDot += i.parent + ':name -- ' + c;
+				mcdDot += ':name [dir="forward", arrowhead="vee", style="dashed"];\n';
 			});
 		});
 		// Relationships:
 		let assoceCounter = 0;
-		this.associations.forEach( a => {
+		_.shuffle(this.associations).forEach( a => {
 			let name = !!a.name && a.name.length > 0
 				? a.name
 				: '_assoce' + assoceCounter++;
@@ -245,20 +257,28 @@ class ErDiags
 			if (a.weak)
 				mcdDot += ', peripheries=2';
 			mcdDot += '];\n';
-			a.entities.forEach( e => {
-				mcdDot += e.name + ':name -- ' + name + '[len="1.00", label="' + ErDiags.CARDINAL[e.card] + '"];\n';
+			_.shuffle(a.entities).forEach( e => {
+				if (Math.random() < 0.5)
+					mcdDot += e.name + ':name -- ' + name;
+				else
+					mcdDot += name + ':name -- ' + e.name;
+				mcdDot += '[label="' + ErDiags.CARDINAL[e.card] + '"];\n';
 			});
 			if (!!a.attributes)
 			{
-				a.attributes.forEach( attr => {
+				_.shuffle(a.attributes).forEach( attr => {
 					let label = (attr.isKey ? '#' : '') + attr.name;
-					mcdDot += name + '_' + attr.name + '[len="1.00", shape=ellipse, label="' + label + '"];\n';
-					mcdDot += name + '_' + attr.name + ' -- ' + name + ';\n';
+					mcdDot += name + '_' + attr.name + '[shape=ellipse, label="' + label + '"];\n';
+					let attrName = name + '_' + attr.name;
+					if (Math.random() < 0.5)
+						mcdDot += attrName + ' -- ' + name + ';\n';
+					else
+						mcdDot += name + ' -- ' + attrName + ';\n';
 				});
 			}
 		});
 		mcdDot += '}';
-		//console.log(mcdDot);
+		console.log(mcdDot);
 		ErDiags.AjaxGet(mcdDot, graphSvg => {
 			this.mcdGraph = graphSvg;
 			element.innerHTML = graphSvg;
@@ -266,6 +286,7 @@ class ErDiags
 	}
 
 	// "Modèle logique des données"
+	// TODO: this one should draw links from foreign keys to keys (port=... in <TD>)
 	drawMld(id)
 	{
 		let element = document.getElementById(id);
