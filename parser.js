@@ -239,6 +239,10 @@ class ErDiags
 		});
 		// Inheritances:
 		_.shuffle(this.inheritances).forEach( i => {
+			// TODO: node shape = triangle fill yellow. See
+			// https://merise.developpez.com/faq/?page=MCD#CIF-ou-dependance-fonctionnelle-de-A-a-Z
+			// https://merise.developpez.com/faq/?page=MLD#Comment-transformer-un-MCD-en-MLD
+			// https://www.developpez.net/forums/d1088964/general-developpement/alm/modelisation/structure-agregation-l-association-d-association/
 			_.shuffle(i.children).forEach( c => {
 				if (Math.random() < 0.5)
 					mcdDot += '"' + c + '":name -- "' + i.parent;
