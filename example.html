@@ -13,13 +13,13 @@
 	let er =
 		new ErDiags(`
 			[Musician]
-			#id (integer)
+			+id (integer)
 			name
 			band
 			role (varchar not null)
 
 			[Instrument]
-			#name
+			+name
 			family (varchar not null default "Brass")
 
 			[Piano]

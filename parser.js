@@ -94,7 +94,7 @@ class ErDiags
 		{
 			let field = { };
 			let line = lines[i];
-			if (line.charAt(0) == '#')
+			if (line.charAt(0) == '+')
 			{
 				field.isKey = true;
 				line = line.slice(1);
