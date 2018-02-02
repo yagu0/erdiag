@@ -5,14 +5,6 @@ Inspired by [this repository](https://code.google.com/archive/p/merisier/).
 This parser reads ER diagrams definition files, and produces two types of diagrams + SQL code.
 [Graphviz](https://www.graphviz.org/) is used on server side to translate parsed graph descriptions into SVG objects.
 
-**TODO** list:
-
- - functional integrity constraints (CIF),
- - inter-relations constraints (or, and, xor...),
- - inheritance with the right symbol (triangle).
-
-*Note:* temporary dependency to [underscore](http://underscorejs.org/); good library but used so far only for its shuffle() method.
-
 -----
 
 An entity is defined as follow
@@ -63,3 +55,14 @@ Finally, blocks must be separated by new lines. For a usage example, see example
 Note that the "drawMcd" method can take a second argument, which indicates the type of graph.
  * "bubble" draws the standard graph, as seen [here](https://en.wikipedia.org/wiki/Entity%E2%80%93relationship_model#/media/File:ER_Diagram_MMORPG.png) for example
  * "compact" (default) use the same box for an entity and its attributes
+
+-----
+
+**TODO** list:
+
+ - functional integrity constraints (CIF)
+ - inter-relations constraints (or, and, xor...)
+ - inheritance with the right symbol (triangle)
+ - put online somewhere (user enter graph description and get SVG + SQL)
+
+*Implementation note:* temporary dependency to [underscore](http://underscorejs.org/); good library but used so far only for its shuffle() method.
