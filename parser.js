@@ -6,17 +6,13 @@ class ErDiags
 		this.entities = { };
 		this.inheritances = [ ];
 		this.associations = [ ];
-		this.txt2json(description);
+		this.tables = { };
+		this.mcdParsing(description);
+		this.mldParsing();
 		// Cache SVG graphs returned by server (in addition to server cache = good perfs)
 		this.mcdGraph = "";
 		this.mldGraph = "";
 		this.sqlText = "";
-	}
-
-	static get TYPES()
-	{
-		// SQLite storage classes without null
-		return ["integer","real","text","blob"];
 	}
 
 	static get CARDINAL()
@@ -31,12 +27,12 @@ class ErDiags
 		};
 	}
 
-	//////////////////
-	// PARSING STAGE 1
-	//////////////////
+	///////////////////////////////
+	// PARSING STAGE 1: text to MCD
+	///////////////////////////////
 
 	// Parse a textual description into a json object
-	txt2json(text)
+	mcdParsing(text)
 	{
 		let lines = text.split("\n");
 		lines.push(""); //easier parsing: always empty line at the end
@@ -108,14 +104,8 @@ class ErDiags
 			if (parenthesis !== null)
 			{
 				let sqlClues = parenthesis[1];
-				let qualifiers = sqlClues;
-				let firstWord = sqlClues.match(/[^\s]+/)[0];
-				if (ErDiags.TYPES.includes(firstWord))
-				{
-					field.type = firstWord;
-					qualifiers = sqlClues.substring(firstWord.length).trim();
-				}
-				field.qualifiers = qualifiers;
+				field.type = sqlClues.match(/[^\s]+/)[0]; //type is always the first indication (mandatory)
+				field.qualifiers = sqlClues.substring(field.type.length).trim();
 			}
 			attributes.push(field);
 		}
@@ -165,9 +155,95 @@ class ErDiags
 		return assoce;
 	}
 
-	//////////////////
-	// PARSING STAGE 2
-	//////////////////
+	//////////////////////////////
+	// PARSING STAGE 2: MCD to MLD
+	//////////////////////////////
+
+	// From entities + relationships to tables
+	mldParsing()
+	{
+		// Pass 1: initialize tables
+		Object.keys(this.entities).forEach( name => {
+			let newTable = [ ]; //array of fields
+			this.entities[name].attributes.forEach( attr => {
+				newTable.push({
+					name: attr.name,
+					type: attr.type,
+					isKey: attr.isKey,
+					qualifiers: attr.qualifiers,
+				});
+			});
+			this.tables[name] = newTable;
+		});
+		// Pass 2: parse associations, add foreign keys when cardinality is 0,1 or 1,1
+		this.associations.forEach( a => {
+			let newTableAttrs = [ ];
+			a.entities.forEach( e => {
+				if (['?','1'].includes(e.card[0]))
+				{
+					// Foreign key apparition (for each entity in association minus current one, for each identifying attribute)
+					a.entities.forEach( e2 => {
+						if (e2.name == e.name)
+							return;
+						e2.attributes.forEach( attr => {
+							if (attr.isKey)
+							{
+								this.tables[e.name].push({
+									isKey: e.card.length >= 2 && e.card[1] == 'R', //"weak tables" foreign keys become part of the key
+									name: "#" + e2.name + "_" + attr.name,
+									type: attr.type,
+									qualifiers: "foreign key references " + e2.name + " " + (e.card[0]=='1' : "not null" : ""),
+									ref: e2.name, //easier drawMld function (fewer regexps)
+								});
+							}
+						});
+					});
+				}
+				else
+				{
+					// Add all keys in current entity
+					let fields = e.attributes.filter( attr => { return attr.isKey; });
+					newTableAttrs.push({
+						fields: fields,
+						entity: e.name,
+					});
+				}
+			}
+			if (newTableAttrs.length > 1)
+			{
+				// Ok, really create a new table
+				let newTable = {
+					name: a.name || newTableAttrs.map( item => { return item.entity; }).join("_");
+					fields: [ ],
+				};
+				newTableAttrs.forEach( item => {
+					item.fields.forEach( f => {
+						newTable.fields.push({
+							name: item.entity + "_" + f.name,
+							isKey: true,
+							type: f.type,,
+							qualifiers: (f.qualifiers+" " || "") + "foreign key references " + item.entity + " not null",
+							ref: item.entity,
+						});
+					});
+				});
+				// Add relationship potential own attributes
+				a.attributes.forEach( attr => {
+					newTable.fields.push({
+						name: attr.name,
+						isKey: false,
+						type: attr.type,
+						qualifiers: attr.qualifiers,
+					});
+				});
+				this.tables[newTable.name] = newTable.fields;
+			}
+		});
+	}
+
+	/////////////////////////////////
+	// DRAWING + GET SQL FROM PARSING
+	/////////////////////////////////
 
 	static AjaxGet(dotInput, callback)
 	{
@@ -260,9 +336,7 @@ class ErDiags
 			mcdDot += 'node [shape=rectangle, style=rounded];\n';
 		let assoceCounter = 0;
 		_.shuffle(this.associations).forEach( a => {
-			let name = !!a.name && a.name.length > 0
-				? a.name
-				: '_assoce' + assoceCounter++;
+			let name = a.name || "_assoce" + assoceCounter++;
 			if (mcdStyle == "bubble")
 			{
 				mcdDot += '"' + name + '" [shape="diamond", style="filled", color="lightgrey", label="' + name + '"';
@@ -313,7 +387,7 @@ class ErDiags
 		});
 	}
 
-	// "Modèle logique des données"
+	// "Modèle logique des données", from MCD without anomalies
 	// TODO: this one should draw links from foreign keys to keys (port=... in <TD>)
 	drawMld(id)
 	{
@@ -325,26 +399,27 @@ class ErDiags
 		}
 		// Build dot graph input (assuming foreign keys not already present...)
 		let mldDot = 'graph {\n';
-		// Pass 1: initialize tables
-		let tables = [ ];
-		Object.keys(this.entities).forEach( name => {
-			tables.push({ name: this.entities[name] }); //TODO: should be a (deep) copy
-		});
-		// Pass 2: parse associations, add foreign keys + new tables
-		this.associations.forEach( a => {
-			a.entities.forEach( e => { // e.card e.name ...
-				switch (e.card)
+		mldDot += 'node [shape=plaintext];\n';
+		let links = "";
+		_.shuffle(Object.keys(this.tables)).forEach( name => {
+			mldDot += '"' + name + '" [label=<<table BORDER="1" ALIGN="LEFT" CELLPADDING="5" CELLSPACING="0">\n';
+			mldDot += '<tr><td BGCOLOR="#ae7d4e" BORDER="0"><font COLOR="#FFFFFF">' + name + '</font></td></tr>\n';
+			this.tables[name].fields.forEach( f => {
+				let label = (f.isKey ? '<u>' : '') + (!!f.qualifiers && f.qualifiers.indexOf("foreign")>=0 ? '#' : '') + f.name + (f.isKey ? '</u>' : '');
+				mldDot += '<tr><td port="' + f.name + '"' + (f.isKey ? ' port="__key"' : '')
+					+ ' BGCOLOR="#FFFFFF" BORDER="0" ALIGN="LEFT"><font COLOR="#000000" >' + label + '</font></td></tr>\n';
+				if (!!f.ref)
 				{
-					case '?':
-					case '?R': //"weak tables" foreign keys become part of the key
-						// TODO
-				// multi-arite : sub-loop si 0,1 ou 1,1 : aspiré comme attribut de l'association (phase 1)
-				// ensuite, que du 0,n ou 1,n : si == 1, OK une table
-				// si 2 ou + : n tables + 1 pour l'assoce, avec attrs clés étrangères
-				// clé étrangère NOT NULL si 1,1
+					if (Math.random() < 0.5)
+						links += '"' + f.ref + '":__key -- "' + '"'+name+'":"'+f.name+'"\n';
+					else
+						links += '"'+name+'":"'+f.name+'" -- "' + f.ref + '":__key\n';
+				}
 			});
+			mldDot += '</table>>];\n';
 		});
-		// this.graphMld = ...
+		mldDot += links + '\n';
+		mldDot += '}\n';
 		//console.log(mldDot);
 		ErDiags.AjaxGet(mldDot, graphSvg => {
 			this.mldGraph = graphSvg;
@@ -360,6 +435,20 @@ class ErDiags
 			element.innerHTML = this.sqlText;
 			return;
 		}
-		//UNIMPLEMENTED (should be straightforward from MLD)
+		let sqlText = "";
+		Object.keys(this.tables).forEach( name => {
+			sqlText += "CREATE TABLE " + name + " (\n";
+			let key = "";
+			this.tables[name].forEach( f => {
+				sqlText += f.name + " " + (f.type || "TEXT") + (" "+f.qualifiers || "") + ",\n";
+				if (f.isKey)
+					key += (key.length>0 ? "," : "") + f.name;
+			});
+			sqlText += "PRIMARY KEY (" + key + ")\n";
+			sqlText += ");\n";
+		});
+		//console.log(sqlText);
+		this.sqlText = sqlText;
+		element.innerHTML = "<pre><code>" + sqlText + "</code></pre>";
 	}
 }

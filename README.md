@@ -5,10 +5,9 @@ Inspired by [this repository](https://code.google.com/archive/p/merisier/).
 This parser reads ER diagrams definition files, and produces two types of diagrams + SQL code.
 [Graphviz](https://www.graphviz.org/) is used on server side to translate parsed graph descriptions into SVG objects.
 
-*Note:* at the moment only the conceptual graph is implemented, and no comments are allowed in textual descriptions.
-At least the former is planned, and also probably a way to indicate relative identifiers, and maybe links between relationships.
+*TODO list:* functional integrity constraints (CIF), inter-relations constraints (or, and, xor...), inheritance with the right symbol (triangle).
 
-*Note bis:* temporary dependency to [underscore](http://underscorejs.org/); good library but used so far only for its shuffle() method.
+*Note:* temporary dependency to [underscore](http://underscorejs.org/); good library but used so far only for its shuffle() method.
 
 -----
 
@@ -36,6 +35,8 @@ Cardinality dictionary:
  * \+ = 1..n
  * 1 = 1..1
  * ? = 0..1
+
+Special cardinalities are also available to indicate relative identification: `?R` and `1R`.
 
 To mark a weak entity, just surround its name by extra-brackets
 
