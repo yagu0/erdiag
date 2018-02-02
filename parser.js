@@ -9,6 +9,9 @@ class ErDiags
 		this.tables = { };
 		this.mcdParsing(description);
 		this.mldParsing();
+		
+		console.log(this.tables);
+		
 		// Cache SVG graphs returned by server (in addition to server cache = good perfs)
 		this.mcdGraph = "";
 		this.mldGraph = "";
@@ -192,7 +195,7 @@ class ErDiags
 									isKey: e.card.length >= 2 && e.card[1] == 'R', //"weak tables" foreign keys become part of the key
 									name: "#" + e2.name + "_" + attr.name,
 									type: attr.type,
-									qualifiers: "foreign key references " + e2.name + " " + (e.card[0]=='1' : "not null" : ""),
+									qualifiers: "foreign key references " + e2.name + " " + (e.card[0]=='1' ? "not null" : ""),
 									ref: e2.name, //easier drawMld function (fewer regexps)
 								});
 							}
@@ -202,18 +205,18 @@ class ErDiags
 				else
 				{
 					// Add all keys in current entity
-					let fields = e.attributes.filter( attr => { return attr.isKey; });
+					let fields = this.entities[e.name].attributes.filter( attr => { return attr.isKey; });
 					newTableAttrs.push({
 						fields: fields,
 						entity: e.name,
 					});
 				}
-			}
+			});
 			if (newTableAttrs.length > 1)
 			{
 				// Ok, really create a new table
 				let newTable = {
-					name: a.name || newTableAttrs.map( item => { return item.entity; }).join("_");
+					name: a.name || newTableAttrs.map( item => { return item.entity; }).join("_"),
 					fields: [ ],
 				};
 				newTableAttrs.forEach( item => {
@@ -221,7 +224,7 @@ class ErDiags
 						newTable.fields.push({
 							name: item.entity + "_" + f.name,
 							isKey: true,
-							type: f.type,,
+							type: f.type,
 							qualifiers: (f.qualifiers+" " || "") + "foreign key references " + item.entity + " not null",
 							ref: item.entity,
 						});
@@ -404,14 +407,14 @@ class ErDiags
 		_.shuffle(Object.keys(this.tables)).forEach( name => {
 			mldDot += '"' + name + '" [label=<<table BORDER="1" ALIGN="LEFT" CELLPADDING="5" CELLSPACING="0">\n';
 			mldDot += '<tr><td BGCOLOR="#ae7d4e" BORDER="0"><font COLOR="#FFFFFF">' + name + '</font></td></tr>\n';
-			this.tables[name].fields.forEach( f => {
+			this.tables[name].forEach( f => {
 				let label = (f.isKey ? '<u>' : '') + (!!f.qualifiers && f.qualifiers.indexOf("foreign")>=0 ? '#' : '') + f.name + (f.isKey ? '</u>' : '');
 				mldDot += '<tr><td port="' + f.name + '"' + (f.isKey ? ' port="__key"' : '')
 					+ ' BGCOLOR="#FFFFFF" BORDER="0" ALIGN="LEFT"><font COLOR="#000000" >' + label + '</font></td></tr>\n';
 				if (!!f.ref)
 				{
 					if (Math.random() < 0.5)
-						links += '"' + f.ref + '":__key -- "' + '"'+name+'":"'+f.name+'"\n';
+						links += '"' + f.ref + '":__key -- "' + name+'":"'+f.name+'"\n';
 					else
 						links += '"'+name+'":"'+f.name+'" -- "' + f.ref + '":__key\n';
 				}
@@ -420,7 +423,7 @@ class ErDiags
 		});
 		mldDot += links + '\n';
 		mldDot += '}\n';
-		//console.log(mldDot);
+		console.log(mldDot);
 		ErDiags.AjaxGet(mldDot, graphSvg => {
 			this.mldGraph = graphSvg;
 			element.innerHTML = graphSvg;
