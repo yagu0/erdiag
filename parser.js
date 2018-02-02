@@ -15,16 +15,17 @@ class ErDiags
 		this.sqlText = "";
 	}
 
-	static get CARDINAL()
+	static CARDINAL(symbol)
 	{
-		return {
-			"*": "0,n",
-			"+": "1,n",
-			"?": "0,1",
-			"1": "1,1",
-			"?R": "(0,1)",
-			"1R": "(1,1)",
-		};
+		let res = { "*": "0,n", "+": "1,n", "?": "0,1", "1": "1,1" } [ symbol[0] ];
+		if (symbol.length >= 2)
+		{
+			if (symbol[1] == 'R')
+				res = '(' + res + ')';
+			else if (['>','<'].includes(symbol[1]))
+				res += symbol[1];
+		}
+		return res;
 	}
 
 	///////////////////////////////
@@ -243,6 +244,22 @@ class ErDiags
 						});
 					});
 				});
+				// Check for duplicates (in case of self-relationship), rename if needed
+				newTable.fields.forEach( (f,i) => {
+					const idx = newTable.fields.findIndex( item => { return item.name == f.name; });
+					if (idx < i)
+					{
+						// Current field is a duplicate
+						let suffix = 2;
+						let newName = f.name + suffix;
+						while (newTable.fields.findIndex( item => { return item.name == newName; }) >= 0)
+						{
+							suffix++;
+							newName = f.name + suffix;
+						}
+						f.name = newName;
+					}
+				});
 				// Add relationship potential own attributes
 				(a.attributes || [ ]).forEach( attr => {
 					newTable.fields.push({
@@ -392,7 +409,7 @@ class ErDiags
 					mcdDot += '"' + e.name + '":name -- "' + name + '"';
 				else
 					mcdDot += '"' + name + '" -- "' + e.name + '":name';
-				mcdDot += '[label="' + ErDiags.CARDINAL[e.card] + '"];\n';
+				mcdDot += '[label="' + ErDiags.CARDINAL(e.card) + '"];\n';
 			});
 		});
 		mcdDot += '}';

@@ -34,6 +34,12 @@ Cardinality dictionary:
 
 Special cardinalities are also available to indicate relative identification: `?R` and `1R`.
 
+And, in case of a self-relationship, symbols '>' and '<' can indicate the sense, as in
+
+	{manage}
+	Users *>
+	Users 1<
+
 To mark a weak entity, just surround its name by extra-brackets
 
 	[[WeakEntity]]
