@@ -3,11 +3,10 @@ class ErDiags
 {
 	constructor(description)
 	{
-		this.entities = {};
-		this.inheritances = [];
-		this.associations = [];
+		this.entities = { };
+		this.inheritances = [ ];
+		this.associations = [ ];
 		this.txt2json(description);
-		this.tables = [];
 		// Cache SVG graphs returned by server (in addition to server cache = good perfs)
 		this.mcdGraph = "";
 		this.mldGraph = "";
@@ -285,12 +284,12 @@ class ErDiags
 			}
 			else
 			{
-				let label = name;
+				let label = '<' + name + '>';
 				if (!!a.attributes)
 				{
 					a.attributes.forEach( attr => {
 						let attrLabel = (attr.isKey ? '#' : '') + attr.name;
-						label += '\\n<' + attrLabel + '>';
+						label += '\\n' + attrLabel;
 					});
 				}
 				mcdDot += '"' + name + '" [color="lightgrey", label="' + label + '"';
@@ -324,18 +323,21 @@ class ErDiags
 			element.innerHTML = this.mcdGraph;
 			return;
 		}
-		// Build dot graph input
+		// Build dot graph input (assuming foreign keys not already present...)
 		let mldDot = 'graph {\n';
-		// Nodes:
+		// Pass 1: initialize tables
+		let tables = [ ];
 		Object.keys(this.entities).forEach( name => {
-			//mld. ... --> devient table
-			// mldDot = ...
+			tables.push({ name: this.entities[name] }); //TODO: should be a (deep) copy
 		});
-		// Relationships:
+		// Pass 2: parse associations, add foreign keys + new tables
 		this.associations.forEach( a => {
 			a.entities.forEach( e => { // e.card e.name ...
-				// Pass 1 : entites deviennent tables
-				// Pass 2 : sur les assoces
+				switch (e.card)
+				{
+					case '?':
+					case '?R': //"weak tables" foreign keys become part of the key
+						// TODO
 				// multi-arite : sub-loop si 0,1 ou 1,1 : aspiré comme attribut de l'association (phase 1)
 				// ensuite, que du 0,n ou 1,n : si == 1, OK une table
 				// si 2 ou + : n tables + 1 pour l'assoce, avec attrs clés étrangères
