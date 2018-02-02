@@ -5,7 +5,11 @@ Inspired by [this repository](https://code.google.com/archive/p/merisier/).
 This parser reads ER diagrams definition files, and produces two types of diagrams + SQL code.
 [Graphviz](https://www.graphviz.org/) is used on server side to translate parsed graph descriptions into SVG objects.
 
-*TODO list:* functional integrity constraints (CIF), inter-relations constraints (or, and, xor...), inheritance with the right symbol (triangle).
+**TODO** list:
+
+ - functional integrity constraints (CIF),
+ - inter-relations constraints (or, and, xor...),
+ - inheritance with the right symbol (triangle).
 
 *Note:* temporary dependency to [underscore](http://underscorejs.org/); good library but used so far only for its shuffle() method.
 
