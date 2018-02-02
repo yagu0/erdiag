@@ -9,9 +9,6 @@ class ErDiags
 		this.tables = { };
 		this.mcdParsing(description);
 		this.mldParsing();
-		
-		console.log(this.tables);
-		
 		// Cache SVG graphs returned by server (in addition to server cache = good perfs)
 		this.mcdGraph = "";
 		this.mldGraph = "";
@@ -178,6 +175,20 @@ class ErDiags
 			});
 			this.tables[name] = newTable;
 		});
+		// Add foreign keys information for children (inheritance). TODO: allow several levels
+		// NOTE: modelisation assume each child has its own table, refering parent (other options exist)
+		this.inheritances.forEach( inh => {
+			let idx = this.tables[inh.parent].findIndex( item => { return item.isKey; });
+			inh.children.forEach( c => {
+				this.tables[c].push({
+					name: inh.parent + "_id",
+					type: this.tables[inh.parent][idx].type,
+					isKey: true,
+					qualifiers: (this.tables[inh.parent][idx].qualifiers || "") + " foreign key references " + inh.parent,
+					ref: inh.parent,
+				});
+			});
+		});
 		// Pass 2: parse associations, add foreign keys when cardinality is 0,1 or 1,1
 		this.associations.forEach( a => {
 			let newTableAttrs = [ ];
@@ -193,7 +204,7 @@ class ErDiags
 							{
 								this.tables[e.name].push({
 									isKey: e.card.length >= 2 && e.card[1] == 'R', //"weak tables" foreign keys become part of the key
-									name: "#" + e2.name + "_" + attr.name,
+									name: e2.name + "_" + attr.name,
 									type: attr.type,
 									qualifiers: "foreign key references " + e2.name + " " + (e.card[0]=='1' ? "not null" : ""),
 									ref: e2.name, //easier drawMld function (fewer regexps)
@@ -225,7 +236,7 @@ class ErDiags
 							name: item.entity + "_" + f.name,
 							isKey: true,
 							type: f.type,
-							qualifiers: (f.qualifiers+" " || "") + "foreign key references " + item.entity + " not null",
+							qualifiers: (f.qualifiers || "") + " foreign key references " + item.entity + " not null",
 							ref: item.entity,
 						});
 					});
@@ -328,10 +339,10 @@ class ErDiags
 			// https://www.developpez.net/forums/d1088964/general-developpement/alm/modelisation/structure-agregation-l-association-d-association/
 			_.shuffle(i.children).forEach( c => {
 				if (Math.random() < 0.5)
-					mcdDot += '"' + c + '":name -- "' + i.parent;
+					mcdDot += '"' + c + '":name -- "' + i.parent + '":name [dir="forward",arrowhead="vee",';
 				else
-					mcdDot += '"' + i.parent + '":name -- "' + c;
-				mcdDot += '":name [dir="forward", arrowhead="vee", style="dashed"];\n';
+					mcdDot += '"' + i.parent + '":name -- "' + c + '":name [dir="back",arrowtail="vee",';
+				mcdDot += 'style="dashed"];\n';
 			});
 		});
 		// Relationships:
@@ -383,7 +394,7 @@ class ErDiags
 			});
 		});
 		mcdDot += '}';
-		console.log(mcdDot);
+		//console.log(mcdDot);
 		ErDiags.AjaxGet(mcdDot, graphSvg => {
 			this.mcdGraph = graphSvg;
 			element.innerHTML = graphSvg;
@@ -402,6 +413,7 @@ class ErDiags
 		}
 		// Build dot graph input (assuming foreign keys not already present...)
 		let mldDot = 'graph {\n';
+		mldDot += 'rankdir="LR";\n';
 		mldDot += 'node [shape=plaintext];\n';
 		let links = "";
 		_.shuffle(Object.keys(this.tables)).forEach( name => {
@@ -409,21 +421,31 @@ class ErDiags
 			mldDot += '<tr><td BGCOLOR="#ae7d4e" BORDER="0"><font COLOR="#FFFFFF">' + name + '</font></td></tr>\n';
 			this.tables[name].forEach( f => {
 				let label = (f.isKey ? '<u>' : '') + (!!f.qualifiers && f.qualifiers.indexOf("foreign")>=0 ? '#' : '') + f.name + (f.isKey ? '</u>' : '');
-				mldDot += '<tr><td port="' + f.name + '"' + (f.isKey ? ' port="__key"' : '')
-					+ ' BGCOLOR="#FFFFFF" BORDER="0" ALIGN="LEFT"><font COLOR="#000000" >' + label + '</font></td></tr>\n';
+				mldDot += '<tr><td port="' + f.name + '"' + ' BGCOLOR="#FFFFFF" BORDER="0" ALIGN="LEFT"><font COLOR="#000000" >' + label + '</font></td></tr>\n';
 				if (!!f.ref)
 				{
+					// Need to find a key attribute in reference entity (the first...)
+					let keyInRef = "";
+					for (let field of this.tables[f.ref])
+					{
+						if (field.isKey)
+						{
+							keyInRef = field.name;
+							break;
+						}
+					}
 					if (Math.random() < 0.5)
-						links += '"' + f.ref + '":__key -- "' + name+'":"'+f.name+'"\n';
+						links += '"' + f.ref + '":"' + keyInRef + '" -- "' + name+'":"'+f.name + '" [dir="forward",arrowhead="dot"';
 					else
-						links += '"'+name+'":"'+f.name+'" -- "' + f.ref + '":__key\n';
+						links += '"'+name+'":"'+f.name+'" -- "' + f.ref + '":"' + keyInRef + '" [dir="back",arrowtail="dot"';
+					links += ']\n;';
 				}
 			});
 			mldDot += '</table>>];\n';
 		});
 		mldDot += links + '\n';
 		mldDot += '}\n';
-		console.log(mldDot);
+		//console.log(mldDot);
 		ErDiags.AjaxGet(mldDot, graphSvg => {
 			this.mldGraph = graphSvg;
 			element.innerHTML = graphSvg;
@@ -443,11 +465,11 @@ class ErDiags
 			sqlText += "CREATE TABLE " + name + " (\n";
 			let key = "";
 			this.tables[name].forEach( f => {
-				sqlText += f.name + " " + (f.type || "TEXT") + (" "+f.qualifiers || "") + ",\n";
+				sqlText += "\t" + f.name + " " + (f.type || "TEXT") + " " + (f.qualifiers || "") + ",\n";
 				if (f.isKey)
 					key += (key.length>0 ? "," : "") + f.name;
 			});
-			sqlText += "PRIMARY KEY (" + key + ")\n";
+			sqlText += "\tPRIMARY KEY (" + key + ")\n";
 			sqlText += ");\n";
 		});
 		//console.log(sqlText);

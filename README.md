@@ -54,7 +54,7 @@ To indicate an inheritance relation, proceed as follow
 	Animal Cat Fish
 	Planet Mars Venus
 
-Finally, blocks must be separated by new lines. For a usage example, see example.html (it should render as seen in example.svg)
+Finally, blocks must be separated by new lines. For a usage example, see example.html (it should render as seen in example\_\*.svg)
 
 Note that the "drawMcd" method can take a second argument, which indicates the type of graph.
  * "bubble" draws the standard graph, as seen [here](https://en.wikipedia.org/wiki/Entity%E2%80%93relationship_model#/media/File:ER_Diagram_MMORPG.png) for example
