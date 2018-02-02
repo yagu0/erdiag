@@ -192,9 +192,11 @@ class ErDiags
 		// Pass 2: parse associations, add foreign keys when cardinality is 0,1 or 1,1
 		this.associations.forEach( a => {
 			let newTableAttrs = [ ];
+			let hasZeroOne = false;
 			a.entities.forEach( e => {
 				if (['?','1'].includes(e.card[0]))
 				{
+					hasZeroOne = true;
 					// Foreign key apparition (for each entity in association minus current one, for each identifying attribute)
 					a.entities.forEach( e2 => {
 						if (e2.name == e.name)
@@ -223,7 +225,7 @@ class ErDiags
 					});
 				}
 			});
-			if (newTableAttrs.length > 1)
+			if (!hasZeroOne && newTableAttrs.length > 1)
 			{
 				// Ok, really create a new table
 				let newTable = {
