@@ -89,7 +89,7 @@ class ErDiags
 	// attributes: ArrayOf {name, [isKey], [type], [qualifiers]}
 	parseAttributes(lines, start, end)
 	{
-		let attributes = [];
+		let attributes = [ ];
 		for (let i=start; i<end; i++)
 		{
 			let field = { };
@@ -199,7 +199,7 @@ class ErDiags
 					a.entities.forEach( e2 => {
 						if (e2.name == e.name)
 							return;
-						e2.attributes.forEach( attr => {
+						this.entities[e2.name].attributes.forEach( attr => {
 							if (attr.isKey)
 							{
 								this.tables[e.name].push({
@@ -242,7 +242,7 @@ class ErDiags
 					});
 				});
 				// Add relationship potential own attributes
-				a.attributes.forEach( attr => {
+				(a.attributes || [ ]).forEach( attr => {
 					newTable.fields.push({
 						name: attr.name,
 						isKey: false,
