@@ -207,11 +207,13 @@ class ErDiags
 						this.entities[e2.name].attributes.forEach( attr => {
 							if (attr.isKey)
 							{
+								// For "weak tables", foreign keys become part of the key
+								const isKey = e.card.length >= 2 && e.card[1] == 'R';
 								this.tables[e.name].push({
-									isKey: e.card.length >= 2 && e.card[1] == 'R', //"weak tables" foreign keys become part of the key
+									isKey: isKey,
 									name: e2.name + "_" + attr.name,
 									type: attr.type,
-									qualifiers: "foreign key references " + e2.name + " " + (e.card[0]=='1' ? "not null" : ""),
+									qualifiers: "foreign key references " + e2.name + " " + (!isKey && e.card[0]=='1' ? "not null" : ""),
 									ref: e2.name, //easier drawMld function (fewer regexps)
 								});
 							}
@@ -241,7 +243,7 @@ class ErDiags
 							name: item.entity + "_" + f.name,
 							isKey: true,
 							type: f.type,
-							qualifiers: (f.qualifiers || "") + " foreign key references " + item.entity + " not null",
+							qualifiers: (f.qualifiers || "") + " foreign key references " + item.entity,
 							ref: item.entity,
 						});
 					});
