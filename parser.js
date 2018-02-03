@@ -100,13 +100,12 @@ class ErDiags
 				field.isKey = true;
 				line = line.slice(1);
 			}
-			field.name = line.match(/[^()"\s]+/)[0];
-			let parenthesis = line.match(/\((.+)\)/);
-			if (parenthesis !== null)
+			field.name = line.match(/[^"\s]+/)[0];
+			let sqlClues = line.substring(field.name.length).trim();
+			if (sqlClues.length > 0)
 			{
-				let sqlClues = parenthesis[1];
 				field.type = sqlClues.match(/[^\s]+/)[0]; //type is always the first indication (mandatory)
-				field.qualifiers = sqlClues.substring(field.type.length).trim();
+				field.qualifiers = sqlClues.substring(field.type.length);
 			}
 			attributes.push(field);
 		}
@@ -167,12 +166,15 @@ class ErDiags
 		Object.keys(this.entities).forEach( name => {
 			let newTable = [ ]; //array of fields
 			this.entities[name].attributes.forEach( attr => {
-				newTable.push({
+				let newField = {
 					name: attr.name,
 					type: attr.type,
 					isKey: attr.isKey,
 					qualifiers: attr.qualifiers,
-				});
+				};
+				if (!!attr.qualifiers && !!attr.qualifiers.match(/foreign/i))
+					Object.assign(newField, {ref: attr.qualifiers.match(/references ([^\s]+)/i)[1]});
+				newTable.push(newField);
 			});
 			this.tables[name] = newTable;
 		});
@@ -439,7 +441,7 @@ class ErDiags
 			mldDot += '"' + name + '" [label=<<table BORDER="1" ALIGN="LEFT" CELLPADDING="5" CELLSPACING="0">\n';
 			mldDot += '<tr><td BGCOLOR="#ae7d4e" BORDER="0"><font COLOR="#FFFFFF">' + name + '</font></td></tr>\n';
 			this.tables[name].forEach( f => {
-				let label = (f.isKey ? '<u>' : '') + (!!f.qualifiers && f.qualifiers.indexOf("foreign")>=0 ? '#' : '') + f.name + (f.isKey ? '</u>' : '');
+				let label = (f.isKey ? '<u>' : '') + (!!f.ref ? '#' : '') + f.name + (f.isKey ? '</u>' : '');
 				mldDot += '<tr><td port="' + f.name + '"' + ' BGCOLOR="#FFFFFF" BORDER="0" ALIGN="LEFT"><font COLOR="#000000" >' + label + '</font></td></tr>\n';
 				if (!!f.ref)
 				{
@@ -484,7 +486,8 @@ class ErDiags
 			sqlText += "CREATE TABLE " + name + " (\n";
 			let key = "";
 			this.tables[name].forEach( f => {
-				sqlText += "\t" + f.name + " " + (f.type || "TEXT") + " " + (f.qualifiers || "") + ",\n";
+				let type = f.type || (f.isKey ? "INTEGER" : "TEXT");
+				sqlText += "\t" + f.name + " " + type + " " + (f.qualifiers || "") + ",\n";
 				if (f.isKey)
 					key += (key.length>0 ? "," : "") + f.name;
 			});
