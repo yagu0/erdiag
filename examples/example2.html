@@ -1,0 +1,83 @@
+<h2>MCD graph:</h3>
+<div id="mcd"></div>
+
+<h2>MLD graph:</h2>
+<div id="mld"></div>
+
+<h2>SQL instructions:</h2>
+<div id="sql"></div>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+<script src="parser.js"></script>
+<script>
+	let er =
+		new ErDiags(`
+			[Users]
+			+id
+			name VARCHAR NOT NULL
+			email VARCHAR
+			location VARCHAR
+			birthdate DATE
+			gender CHARACTER
+			avatar BLOB
+
+			[Groups]
+			+id
+			name VARCHAR NOT NULL
+			description TEXT
+
+			[Events]
+			+id
+			name VARCHAR NOT NULL
+			description TEXT
+
+			[Messages]
+			+id
+			date DATE NOT NULL
+			content TEXT NOT NULL
+			receiver INTEGER REFERENCES Users(id) NOT NULL
+
+			[Posts]
+			+id
+			content TEXT NOT NULL
+			date DATE NOT NULL
+			type VARCHAR NOT NULL DEFAULT "Wall"
+			reference INTEGER NOT NULL
+
+			{publish}
+			Posts 1
+			Users *
+
+			{send}
+			Messages 1
+			Users *
+
+			{like}
+			Users *
+			Posts *
+
+			{follow}
+			Users *
+			Users *
+
+			{friend_with}
+			Users *
+			Users *
+
+			{participate}
+			Events *
+			Users *
+			--
+			degree VARCHAR NOT NULL DEFAULT "sure"
+			creator BOOLEAN
+
+			{belong_to}
+			Groups +
+			Users *
+			--
+					creator BOOLEAN
+		`);
+	er.drawMcd("mcd"); //,"bubble"
+	er.drawMld("mld");
+	er.fillSql("sql");
+</script>

@@ -172,8 +172,11 @@ class ErDiags
 					isKey: attr.isKey,
 					qualifiers: attr.qualifiers,
 				};
-				if (!!attr.qualifiers && !!attr.qualifiers.match(/foreign/i))
+				if (!!attr.qualifiers && !!attr.qualifiers.match(/references/i))
+				{
 					Object.assign(newField, {ref: attr.qualifiers.match(/references ([^\s]+)/i)[1]});
+					attr.qualifiers = attr.qualifiers.replace(/references [^\s]+/, "");
+				}
 				newTable.push(newField);
 			});
 			this.tables[name] = newTable;
@@ -187,8 +190,8 @@ class ErDiags
 					name: inh.parent + "_id",
 					type: this.tables[inh.parent][idx].type,
 					isKey: true,
-					qualifiers: (this.tables[inh.parent][idx].qualifiers || "") + " foreign key references " + inh.parent,
-					ref: inh.parent,
+					qualifiers: this.tables[inh.parent][idx].qualifiers || "",
+					ref: inh.parent + "(" + this.tables[inh.parent][idx].name + ")",
 				});
 			});
 		});
@@ -213,8 +216,8 @@ class ErDiags
 									isKey: isKey,
 									name: e2.name + "_" + attr.name,
 									type: attr.type,
-									qualifiers: "foreign key references " + e2.name + " " + (!isKey && e.card[0]=='1' ? "not null" : ""),
-									ref: e2.name, //easier drawMld function (fewer regexps)
+									qualifiers: !isKey && e.card[0]=='1' ? "not null" : "",
+									ref: e2.name + "(" + attr.name + ")",
 								});
 							}
 						});
@@ -243,8 +246,8 @@ class ErDiags
 							name: item.entity + "_" + f.name,
 							isKey: true,
 							type: f.type,
-							qualifiers: (f.qualifiers || "") + " foreign key references " + item.entity,
-							ref: item.entity,
+							qualifiers: f.qualifiers || "",
+							ref: item.entity + "(" + f.name + ")",
 						});
 					});
 				});
@@ -447,20 +450,11 @@ class ErDiags
 				mldDot += '<tr><td port="' + f.name + '"' + ' BGCOLOR="#FFFFFF" BORDER="0" ALIGN="LEFT"><font COLOR="#000000" >' + label + '</font></td></tr>\n';
 				if (!!f.ref)
 				{
-					// Need to find a key attribute in reference entity (the first...)
-					let keyInRef = "";
-					for (let field of this.tables[f.ref])
-					{
-						if (field.isKey)
-						{
-							keyInRef = field.name;
-							break;
-						}
-					}
+					const refPort = f.ref.slice(0,-1).replace('(',':');
 					if (Math.random() < 0.5)
-						links += '"' + f.ref + '":"' + keyInRef + '" -- "' + name+'":"'+f.name + '" [dir="forward",arrowhead="dot"';
+						links += refPort + ' -- "' + name+'":"'+f.name + '" [dir="forward",arrowhead="dot"';
 					else
-						links += '"'+name+'":"'+f.name+'" -- "' + f.ref + '":"' + keyInRef + '" [dir="back",arrowtail="dot"';
+						links += '"'+name+'":"'+f.name+'" -- ' + refPort + ' [dir="back",arrowtail="dot"';
 					links += ']\n;';
 				}
 			});
@@ -487,14 +481,23 @@ class ErDiags
 		Object.keys(this.tables).forEach( name => {
 			sqlText += "CREATE TABLE " + name + " (\n";
 			let key = "";
+			let foreignKey = [ ];
 			this.tables[name].forEach( f => {
 				let type = f.type || (f.isKey ? "INTEGER" : "TEXT");
+				if (!!f.ref)
+					foreignKey.push({name: f.name, ref: f.ref});
 				sqlText += "\t" + f.name + " " + type + " " + (f.qualifiers || "") + ",\n";
 				if (f.isKey)
 					key += (key.length>0 ? "," : "") + f.name;
 			});
-			sqlText += "\tPRIMARY KEY (" + key + ")\n";
-			sqlText += ");\n";
+			sqlText += "\tPRIMARY KEY (" + key + ")";
+			foreignKey.forEach( f => {
+				let refParts = f.ref.split("(");
+				const table = refParts[0];
+				const field = refParts[1].slice(0,-1); //remove last parenthesis
+				sqlText += ",\n\tFOREIGN KEY (" + f.name + ") REFERENCES " + table + "(" + field + ")";
+			});
+			sqlText += "\n);\n";
 		});
 		//console.log(sqlText);
 		this.sqlText = sqlText;
