@@ -68,8 +68,7 @@ Note that the "drawMcd" method can take a second argument, which indicates the t
 **TODO** list:
 
  - functional integrity constraints (CIF)
- - inter-relations constraints (or, and, xor...)
+ - inter-relations constraints (or, and, xor, inclusion)
  - inheritance with the right symbol (triangle)
- - put online somewhere (user enter graph description and get SVG + SQL)
 
-*Implementation note:* temporary dependency to [underscore](http://underscorejs.org/); good library but used so far only for its shuffle() method.
+*Implementation note:* temporary dependency to [underscore](http://underscorejs.org/); used only for its shuffle() method.
