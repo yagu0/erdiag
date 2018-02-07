@@ -11,8 +11,13 @@
 		<button onClick="processGraphDesc()">Send</button>
 		<div>
 			<span>MCD graph type:</span>
-			<input type="radio" name="output" value="compact" checked/> compact
-			<input type="radio" name="output" value="bubble"/> bubble
+			<input type="radio" name="mcd" value="compact" checked/> compact
+			<input type="radio" name="mcd" value="bubble"/> bubble
+		</div>
+		<div>
+			<span>Output type:</span>
+			<input type="radio" name="output" value="graph" checked/> drawn graph
+			<input type="radio" name="output" value="text"/> graphviz input
 		</div>
 
 		<textarea id="graphDesc" rows="15" style="width:100%"></textarea>
@@ -29,19 +34,19 @@
 		<script src="parser.js"></script>
 		<script>
 			const result = document.getElementById("result");
-			function processGraphDesc() {
-				const graphDesc = document.getElementById("graphDesc").value;
-				const er = new ErDiags(graphDesc);
-				let mode = "compact";
-				for (let el of document.getElementsByName("output"))
+			function getRadioValue(name) {
+				for (let el of document.getElementsByName(name))
 				{
 					if (el.checked)
-					{
-						mode = el.value;
-						break;
-					}
+						return el.value;
 				}
-				er.drawMcd("mcd", mode);
+			}
+			function processGraphDesc() {
+				const graphDesc = document.getElementById("graphDesc").value;
+				const mcdType = getRadioValue("mcd");
+				const outputType = getRadioValue("output");
+				const er = new ErDiags(graphDesc, outputType);
+				er.drawMcd("mcd", mcdType);
 				er.drawMld("mld");
 				er.fillSql("sql");
 				result.style.display = "block";

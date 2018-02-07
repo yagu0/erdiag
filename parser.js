@@ -1,7 +1,7 @@
 // ER diagram description parser
 class ErDiags
 {
-	constructor(description, callDot)
+	constructor(description, output)
 	{
 		this.entities = { };
 		this.inheritances = [ ];
@@ -9,8 +9,8 @@ class ErDiags
 		this.tables = { };
 		this.mcdParsing(description);
 		this.mldParsing();
-		this.callDot = !!callDot;
-		if (this.callDot)
+		this.output = output;
+		if (output == "graph")
 		{
 			// Cache SVG graphs returned by server (in addition to server cache = good perfs)
 			this.mcdGraph = "";
@@ -174,12 +174,11 @@ class ErDiags
 					name: attr.name,
 					type: attr.type,
 					isKey: attr.isKey,
-					qualifiers: attr.qualifiers,
 				};
 				if (!!attr.qualifiers && !!attr.qualifiers.match(/references/i))
 				{
 					Object.assign(newField, {ref: attr.qualifiers.match(/references ([^\s]+)/i)[1]});
-					attr.qualifiers = attr.qualifiers.replace(/references [^\s]+/i, "");
+					newField.qualifiers = attr.qualifiers.replace(/references [^\s]+/i, "");
 				}
 				newTable.push(newField);
 			});
@@ -424,7 +423,7 @@ class ErDiags
 			});
 		});
 		mcdDot += '}';
-		if (this.callDot)
+		if (this.output == "graph")
 		{
 			// Draw graph in element
 			ErDiags.AjaxGet(mcdDot, graphSvg => {
@@ -470,7 +469,7 @@ class ErDiags
 		});
 		mldDot += links + '\n';
 		mldDot += '}';
-		if (this.callDot)
+		if (this.output == "graph")
 		{
 			ErDiags.AjaxGet(mldDot, graphSvg => {
 				this.mldGraph = graphSvg;
