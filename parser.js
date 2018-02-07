@@ -1,7 +1,7 @@
 // ER diagram description parser
 class ErDiags
 {
-	constructor(description)
+	constructor(description, callDot)
 	{
 		this.entities = { };
 		this.inheritances = [ ];
@@ -9,9 +9,13 @@ class ErDiags
 		this.tables = { };
 		this.mcdParsing(description);
 		this.mldParsing();
-		// Cache SVG graphs returned by server (in addition to server cache = good perfs)
-		this.mcdGraph = "";
-		this.mldGraph = "";
+		this.callDot = !!callDot;
+		if (this.callDot)
+		{
+			// Cache SVG graphs returned by server (in addition to server cache = good perfs)
+			this.mcdGraph = "";
+			this.mldGraph = "";
+		}
 		this.sqlText = "";
 	}
 
@@ -302,7 +306,7 @@ class ErDiags
 	{
 		let element = document.getElementById(id);
 		mcdStyle = mcdStyle || "compact";
-		if (this.mcdGraph.length > 0)
+		if (!!this.mcdGraph)
 		{
 			element.innerHTML = this.mcdGraph;
 			return;
@@ -420,19 +424,23 @@ class ErDiags
 			});
 		});
 		mcdDot += '}';
-		//console.log(mcdDot);
-		ErDiags.AjaxGet(mcdDot, graphSvg => {
-			this.mcdGraph = graphSvg;
-			element.innerHTML = graphSvg;
-		});
+		if (this.callDot)
+		{
+			// Draw graph in element
+			ErDiags.AjaxGet(mcdDot, graphSvg => {
+				this.mcdGraph = graphSvg;
+				element.innerHTML = graphSvg;
+			});
+		}
+		else //just show dot input
+			element.innerHTML = mcdDot.replace(/</g,"&lt;").replace(/>/g,"&gt;");
 	}
 
 	// "Modèle logique des données", from MCD without anomalies
-	// TODO: this one should draw links from foreign keys to keys (port=... in <TD>)
 	drawMld(id)
 	{
 		let element = document.getElementById(id);
-		if (this.mldGraph.length > 0)
+		if (!!this.mldGraph)
 		{
 			element.innerHTML = this.mcdGraph;
 			return;
@@ -461,18 +469,22 @@ class ErDiags
 			mldDot += '</table>>];\n';
 		});
 		mldDot += links + '\n';
-		mldDot += '}\n';
-		//console.log(mldDot);
-		ErDiags.AjaxGet(mldDot, graphSvg => {
-			this.mldGraph = graphSvg;
-			element.innerHTML = graphSvg;
-		});
+		mldDot += '}';
+		if (this.callDot)
+		{
+			ErDiags.AjaxGet(mldDot, graphSvg => {
+				this.mldGraph = graphSvg;
+				element.innerHTML = graphSvg;
+			});
+		}
+		else
+			element.innerHTML = mldDot.replace(/</g,"&lt;").replace(/>/g,"&gt;");
 	}
 
 	fillSql(id)
 	{
 		let element = document.getElementById(id);
-		if (this.sqlText.length > 0)
+		if (!!this.sqlText)
 		{
 			element.innerHTML = this.sqlText;
 			return;
@@ -499,7 +511,6 @@ class ErDiags
 			});
 			sqlText += "\n);\n";
 		});
-		//console.log(sqlText);
 		this.sqlText = sqlText;
 		element.innerHTML = "<pre><code>" + sqlText + "</code></pre>";
 	}
