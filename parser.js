@@ -179,7 +179,7 @@ class ErDiags
 				if (!!attr.qualifiers && !!attr.qualifiers.match(/references/i))
 				{
 					Object.assign(newField, {ref: attr.qualifiers.match(/references ([^\s]+)/i)[1]});
-					attr.qualifiers = attr.qualifiers.replace(/references [^\s]+/, "");
+					attr.qualifiers = attr.qualifiers.replace(/references [^\s]+/i, "");
 				}
 				newTable.push(newField);
 			});
