@@ -10,10 +10,10 @@ This parser reads ER diagrams definition files, and produces two types of diagra
 An entity is defined as follow
 
 	[Entity]
-	#attr1 (*)
+	+attr1 (*)
 	attr2 (*)
 
-with (\*) = optional SQL indications, and # denoting a (part of) a key.
+with (\*) = optional SQL indications, and + denoting a (part of) an identifier.
 
 A relationship is defined in this way
 
