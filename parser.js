@@ -1,7 +1,7 @@
 // ER diagram description parser
 class ErDiags
 {
-	constructor(description, output)
+	constructor(description, output, image)
 	{
 		this.entities = { };
 		this.inheritances = [ ];
@@ -9,14 +9,8 @@ class ErDiags
 		this.tables = { };
 		this.mcdParsing(description);
 		this.mldParsing();
-		this.output = output;
-		if (output == "graph")
-		{
-			// Cache SVG graphs returned by server (in addition to server cache = good perfs)
-			this.mcdGraph = "";
-			this.mldGraph = "";
-		}
-		this.sqlText = "";
+		this.output = output || "compact";
+		this.image = image || "svg";
 	}
 
 	static CARDINAL(symbol)
@@ -288,28 +282,12 @@ class ErDiags
 	// DRAWING + GET SQL FROM PARSING
 	/////////////////////////////////
 
-	static AjaxGet(dotInput, callback)
-	{
-		let xhr = new XMLHttpRequest();
-		xhr.onreadystatechange = function() {
-			if (this.readyState == 4 && this.status == 200)
-				callback(this.responseText);
-		};
-		xhr.open("GET", "scripts/getGraphSvg.php?dot=" + encodeURIComponent(dotInput), true);
-		xhr.send();
-	}
-
 	// "Modèle conceptuel des données". TODO: option for graph size
 	// NOTE: randomizing helps to obtain better graphs (sometimes)
 	drawMcd(id, mcdStyle) //mcdStyle: bubble, or compact
 	{
 		let element = document.getElementById(id);
 		mcdStyle = mcdStyle || "compact";
-		if (!!this.mcdGraph)
-		{
-			element.innerHTML = this.mcdGraph;
-			return;
-		}
 		// Build dot graph input
 		let mcdDot = 'graph {\n';
 		mcdDot += 'rankdir="LR";\n';
@@ -423,14 +401,8 @@ class ErDiags
 			});
 		});
 		mcdDot += '}';
-		if (this.output == "graph")
-		{
-			// Draw graph in element
-			ErDiags.AjaxGet(mcdDot, graphSvg => {
-				this.mcdGraph = graphSvg;
-				element.innerHTML = graphSvg;
-			});
-		}
+		if (this.output == "graph") //draw graph in element
+			element.innerHTML = "<img src='scripts/getGraph_" + this.image + ".php?dot=" + encodeURIComponent(mcdDot) + "'/>";
 		else //just show dot input
 			element.innerHTML = mcdDot.replace(/</g,"&lt;").replace(/>/g,"&gt;");
 	}
@@ -439,11 +411,6 @@ class ErDiags
 	drawMld(id)
 	{
 		let element = document.getElementById(id);
-		if (!!this.mldGraph)
-		{
-			element.innerHTML = this.mcdGraph;
-			return;
-		}
 		// Build dot graph input (assuming foreign keys not already present...)
 		let mldDot = 'graph {\n';
 		mldDot += 'rankdir="LR";\n';
@@ -470,12 +437,7 @@ class ErDiags
 		mldDot += links + '\n';
 		mldDot += '}';
 		if (this.output == "graph")
-		{
-			ErDiags.AjaxGet(mldDot, graphSvg => {
-				this.mldGraph = graphSvg;
-				element.innerHTML = graphSvg;
-			});
-		}
+			element.innerHTML = "<img src='scripts/getGraph_" + this.image + ".php?dot=" + encodeURIComponent(mldDot) + "'/>";
 		else
 			element.innerHTML = mldDot.replace(/</g,"&lt;").replace(/>/g,"&gt;");
 	}

@@ -19,6 +19,11 @@
 			<input type="radio" name="output" value="graph" checked/> drawn graph
 			<input type="radio" name="output" value="text"/> graphviz input
 		</div>
+		<div>
+			<span>Image type:</span>
+			<input type="radio" name="image" value="svg" checked/> SVG
+			<input type="radio" name="image" value="png"/> PNG
+		</div>
 
 		<textarea id="graphDesc" rows="15" style="width:100%"></textarea>
 		<div id="result" style="display:none">
@@ -45,7 +50,8 @@
 				const graphDesc = document.getElementById("graphDesc").value;
 				const mcdType = getRadioValue("mcd");
 				const outputType = getRadioValue("output");
-				const er = new ErDiags(graphDesc, outputType);
+				const imageType = getRadioValue("image");
+				const er = new ErDiags(graphDesc, outputType, imageType);
 				er.drawMcd("mcd", mcdType);
 				er.drawMld("mld");
 				er.fillSql("sql");
