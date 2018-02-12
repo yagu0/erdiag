@@ -187,13 +187,8 @@ class ErDiags
 					name: inh.parent + "_id",
 					type: this.tables[inh.parent][idx].type,
 					isKey: true,
-<<<<<<< HEAD
-					qualifiers: (this.tables[inh.parent][idx].qualifiers || "") + " foreign key references " + inh.parent,
-					ref: inh.parent,
-=======
 					qualifiers: this.tables[inh.parent][idx].qualifiers || "",
 					ref: inh.parent + "(" + this.tables[inh.parent][idx].name + ")",
->>>>>>> 40b4a9d230d105a61e22bef0a63a6e8d515524e9
 				});
 			});
 		});
