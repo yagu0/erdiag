@@ -1,7 +1,7 @@
 // ER diagram description parser
 class ErDiags
 {
-	constructor(description)
+	constructor(description, output, image)
 	{
 		this.entities = { };
 		this.inheritances = [ ];
@@ -9,22 +9,21 @@ class ErDiags
 		this.tables = { };
 		this.mcdParsing(description);
 		this.mldParsing();
-		// Cache SVG graphs returned by server (in addition to server cache = good perfs)
-		this.mcdGraph = "";
-		this.mldGraph = "";
-		this.sqlText = "";
+		this.output = output || "compact";
+		this.image = image || "svg";
 	}
 
-	static get CARDINAL()
+	static CARDINAL(symbol)
 	{
-		return {
-			"*": "0,n",
-			"+": "1,n",
-			"?": "0,1",
-			"1": "1,1",
-			"?R": "(0,1)",
-			"1R": "(1,1)",
-		};
+		let res = { "*": "0,n", "+": "1,n", "?": "0,1", "1": "1,1" } [ symbol[0] ];
+		if (symbol.length >= 2)
+		{
+			if (symbol[1] == 'R')
+				res = '(' + res + ')';
+			else if (['>','<'].includes(symbol[1]))
+				res += symbol[1];
+		}
+		return res;
 	}
 
 	///////////////////////////////
@@ -99,13 +98,12 @@ class ErDiags
 				field.isKey = true;
 				line = line.slice(1);
 			}
-			field.name = line.match(/[^()"\s]+/)[0];
-			let parenthesis = line.match(/\((.+)\)/);
-			if (parenthesis !== null)
+			field.name = line.match(/[^"\s]+/)[0];
+			let sqlClues = line.substring(field.name.length).trim();
+			if (sqlClues.length > 0)
 			{
-				let sqlClues = parenthesis[1];
 				field.type = sqlClues.match(/[^\s]+/)[0]; //type is always the first indication (mandatory)
-				field.qualifiers = sqlClues.substring(field.type.length).trim();
+				field.qualifiers = sqlClues.substring(field.type.length);
 			}
 			attributes.push(field);
 		}
@@ -166,12 +164,17 @@ class ErDiags
 		Object.keys(this.entities).forEach( name => {
 			let newTable = [ ]; //array of fields
 			this.entities[name].attributes.forEach( attr => {
-				newTable.push({
+				let newField = {
 					name: attr.name,
 					type: attr.type,
 					isKey: attr.isKey,
-					qualifiers: attr.qualifiers,
-				});
+				};
+				if (!!attr.qualifiers && !!attr.qualifiers.match(/references/i))
+				{
+					Object.assign(newField, {ref: attr.qualifiers.match(/references ([^\s]+)/i)[1]});
+					newField.qualifiers = attr.qualifiers.replace(/references [^\s]+/i, "");
+				}
+				newTable.push(newField);
 			});
 			this.tables[name] = newTable;
 		});
@@ -184,8 +187,13 @@ class ErDiags
 					name: inh.parent + "_id",
 					type: this.tables[inh.parent][idx].type,
 					isKey: true,
+<<<<<<< HEAD
 					qualifiers: (this.tables[inh.parent][idx].qualifiers || "") + " foreign key references " + inh.parent,
 					ref: inh.parent,
+=======
+					qualifiers: this.tables[inh.parent][idx].qualifiers || "",
+					ref: inh.parent + "(" + this.tables[inh.parent][idx].name + ")",
+>>>>>>> 40b4a9d230d105a61e22bef0a63a6e8d515524e9
 				});
 			});
 		});
@@ -204,12 +212,14 @@ class ErDiags
 						this.entities[e2.name].attributes.forEach( attr => {
 							if (attr.isKey)
 							{
+								// For "weak tables", foreign keys become part of the key
+								const isKey = e.card.length >= 2 && e.card[1] == 'R';
 								this.tables[e.name].push({
-									isKey: e.card.length >= 2 && e.card[1] == 'R', //"weak tables" foreign keys become part of the key
+									isKey: isKey,
 									name: e2.name + "_" + attr.name,
 									type: attr.type,
-									qualifiers: "foreign key references " + e2.name + " " + (e.card[0]=='1' ? "not null" : ""),
-									ref: e2.name, //easier drawMld function (fewer regexps)
+									qualifiers: !isKey && e.card[0]=='1' ? "not null" : "",
+									ref: e2.name + "(" + attr.name + ")",
 								});
 							}
 						});
@@ -238,10 +248,26 @@ class ErDiags
 							name: item.entity + "_" + f.name,
 							isKey: true,
 							type: f.type,
-							qualifiers: (f.qualifiers || "") + " foreign key references " + item.entity + " not null",
-							ref: item.entity,
+							qualifiers: f.qualifiers || "",
+							ref: item.entity + "(" + f.name + ")",
 						});
 					});
+				});
+				// Check for duplicates (in case of self-relationship), rename if needed
+				newTable.fields.forEach( (f,i) => {
+					const idx = newTable.fields.findIndex( item => { return item.name == f.name; });
+					if (idx < i)
+					{
+						// Current field is a duplicate
+						let suffix = 2;
+						let newName = f.name + suffix;
+						while (newTable.fields.findIndex( item => { return item.name == newName; }) >= 0)
+						{
+							suffix++;
+							newName = f.name + suffix;
+						}
+						f.name = newName;
+					}
 				});
 				// Add relationship potential own attributes
 				(a.attributes || [ ]).forEach( attr => {
@@ -261,28 +287,12 @@ class ErDiags
 	// DRAWING + GET SQL FROM PARSING
 	/////////////////////////////////
 
-	static AjaxGet(dotInput, callback)
-	{
-		let xhr = new XMLHttpRequest();
-		xhr.onreadystatechange = function() {
-			if (this.readyState == 4 && this.status == 200)
-				callback(this.responseText);
-		};
-		xhr.open("GET", "scripts/getGraphSvg.php?dot=" + encodeURIComponent(dotInput), true);
-		xhr.send();
-	}
-
 	// "Modèle conceptuel des données". TODO: option for graph size
 	// NOTE: randomizing helps to obtain better graphs (sometimes)
 	drawMcd(id, mcdStyle) //mcdStyle: bubble, or compact
 	{
 		let element = document.getElementById(id);
 		mcdStyle = mcdStyle || "compact";
-		if (this.mcdGraph.length > 0)
-		{
-			element.innerHTML = this.mcdGraph;
-			return;
-		}
 		// Build dot graph input
 		let mcdDot = 'graph {\n';
 		mcdDot += 'rankdir="LR";\n';
@@ -392,27 +402,20 @@ class ErDiags
 					mcdDot += '"' + e.name + '":name -- "' + name + '"';
 				else
 					mcdDot += '"' + name + '" -- "' + e.name + '":name';
-				mcdDot += '[label="' + ErDiags.CARDINAL[e.card] + '"];\n';
+				mcdDot += '[label="' + ErDiags.CARDINAL(e.card) + '"];\n';
 			});
 		});
 		mcdDot += '}';
-		//console.log(mcdDot);
-		ErDiags.AjaxGet(mcdDot, graphSvg => {
-			this.mcdGraph = graphSvg;
-			element.innerHTML = graphSvg;
-		});
+		if (this.output == "graph") //draw graph in element
+			element.innerHTML = "<img src='scripts/getGraph_" + this.image + ".php?dot=" + encodeURIComponent(mcdDot) + "'/>";
+		else //just show dot input
+			element.innerHTML = mcdDot.replace(/</g,"&lt;").replace(/>/g,"&gt;");
 	}
 
 	// "Modèle logique des données", from MCD without anomalies
-	// TODO: this one should draw links from foreign keys to keys (port=... in <TD>)
 	drawMld(id)
 	{
 		let element = document.getElementById(id);
-		if (this.mldGraph.length > 0)
-		{
-			element.innerHTML = this.mcdGraph;
-			return;
-		}
 		// Build dot graph input (assuming foreign keys not already present...)
 		let mldDot = 'graph {\n';
 		mldDot += 'rankdir="LR";\n';
@@ -422,42 +425,32 @@ class ErDiags
 			mldDot += '"' + name + '" [label=<<table BORDER="1" ALIGN="LEFT" CELLPADDING="5" CELLSPACING="0">\n';
 			mldDot += '<tr><td BGCOLOR="#ae7d4e" BORDER="0"><font COLOR="#FFFFFF">' + name + '</font></td></tr>\n';
 			this.tables[name].forEach( f => {
-				let label = (f.isKey ? '<u>' : '') + (!!f.qualifiers && f.qualifiers.indexOf("foreign")>=0 ? '#' : '') + f.name + (f.isKey ? '</u>' : '');
+				let label = (f.isKey ? '<u>' : '') + (!!f.ref ? '#' : '') + f.name + (f.isKey ? '</u>' : '');
 				mldDot += '<tr><td port="' + f.name + '"' + ' BGCOLOR="#FFFFFF" BORDER="0" ALIGN="LEFT"><font COLOR="#000000" >' + label + '</font></td></tr>\n';
 				if (!!f.ref)
 				{
-					// Need to find a key attribute in reference entity (the first...)
-					let keyInRef = "";
-					for (let field of this.tables[f.ref])
-					{
-						if (field.isKey)
-						{
-							keyInRef = field.name;
-							break;
-						}
-					}
+					const refPort = f.ref.slice(0,-1).replace('(',':');
 					if (Math.random() < 0.5)
-						links += '"' + f.ref + '":"' + keyInRef + '" -- "' + name+'":"'+f.name + '" [dir="forward",arrowhead="dot"';
+						links += refPort + ' -- "' + name+'":"'+f.name + '" [dir="forward",arrowhead="dot"';
 					else
-						links += '"'+name+'":"'+f.name+'" -- "' + f.ref + '":"' + keyInRef + '" [dir="back",arrowtail="dot"';
+						links += '"'+name+'":"'+f.name+'" -- ' + refPort + ' [dir="back",arrowtail="dot"';
 					links += ']\n;';
 				}
 			});
 			mldDot += '</table>>];\n';
 		});
 		mldDot += links + '\n';
-		mldDot += '}\n';
-		//console.log(mldDot);
-		ErDiags.AjaxGet(mldDot, graphSvg => {
-			this.mldGraph = graphSvg;
-			element.innerHTML = graphSvg;
-		});
+		mldDot += '}';
+		if (this.output == "graph")
+			element.innerHTML = "<img src='scripts/getGraph_" + this.image + ".php?dot=" + encodeURIComponent(mldDot) + "'/>";
+		else
+			element.innerHTML = mldDot.replace(/</g,"&lt;").replace(/>/g,"&gt;");
 	}
 
 	fillSql(id)
 	{
 		let element = document.getElementById(id);
-		if (this.sqlText.length > 0)
+		if (!!this.sqlText)
 		{
 			element.innerHTML = this.sqlText;
 			return;
@@ -466,15 +459,24 @@ class ErDiags
 		Object.keys(this.tables).forEach( name => {
 			sqlText += "CREATE TABLE " + name + " (\n";
 			let key = "";
+			let foreignKey = [ ];
 			this.tables[name].forEach( f => {
-				sqlText += "\t" + f.name + " " + (f.type || "TEXT") + " " + (f.qualifiers || "") + ",\n";
+				let type = f.type || (f.isKey ? "INTEGER" : "TEXT");
+				if (!!f.ref)
+					foreignKey.push({name: f.name, ref: f.ref});
+				sqlText += "\t" + f.name + " " + type + " " + (f.qualifiers || "") + ",\n";
 				if (f.isKey)
 					key += (key.length>0 ? "," : "") + f.name;
 			});
-			sqlText += "\tPRIMARY KEY (" + key + ")\n";
-			sqlText += ");\n";
+			sqlText += "\tPRIMARY KEY (" + key + ")";
+			foreignKey.forEach( f => {
+				let refParts = f.ref.split("(");
+				const table = refParts[0];
+				const field = refParts[1].slice(0,-1); //remove last parenthesis
+				sqlText += ",\n\tFOREIGN KEY (" + f.name + ") REFERENCES " + table + "(" + field + ")";
+			});
+			sqlText += "\n);\n";
 		});
-		//console.log(sqlText);
 		this.sqlText = sqlText;
 		element.innerHTML = "<pre><code>" + sqlText + "</code></pre>";
 	}

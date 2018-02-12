@@ -10,10 +10,10 @@ This parser reads ER diagrams definition files, and produces two types of diagra
 An entity is defined as follow
 
 	[Entity]
-	#attr1 (*)
+	+attr1 (*)
 	attr2 (*)
 
-with (\*) = optional SQL indications, and # denoting a (part of) a key.
+with (\*) = optional SQL indications, and + denoting a (part of) an identifier.
 
 A relationship is defined in this way
 
@@ -34,6 +34,12 @@ Cardinality dictionary:
 
 Special cardinalities are also available to indicate relative identification: `?R` and `1R`.
 
+And, in case of a self-relationship, symbols '>' and '<' can indicate the sense, as in
+
+	{manage}
+	Users *>
+	Users 1<
+
 To mark a weak entity, just surround its name by extra-brackets
 
 	[[WeakEntity]]
@@ -50,10 +56,11 @@ To indicate an inheritance relation, proceed as follow
 	Animal Cat Fish
 	Planet Mars Venus
 
-Finally, blocks must be separated by new lines. For a usage example, see example.html (it should render as seen in example\_\*.svg)
+Finally, blocks must be separated by new lines. For a usage example, see example.html (it should render as seen in example\_\*.svg);
+or example2.html for a bigger, more realistic illustration (small social network).
 
 Note that the "drawMcd" method can take a second argument, which indicates the type of graph.
- * "bubble" draws the standard graph, as seen [here](https://en.wikipedia.org/wiki/Entity%E2%80%93relationship_model#/media/File:ER_Diagram_MMORPG.png) for example
+ * "bubble" draws the standard graph, as seen [here](https://en.wikipedia.org/wiki/Entity%E2%80%93relationship_model#/media/File:ER_Diagram_MMORPG.png)
  * "compact" (default) use the same box for an entity and its attributes
 
 -----
@@ -61,8 +68,7 @@ Note that the "drawMcd" method can take a second argument, which indicates the t
 **TODO** list:
 
  - functional integrity constraints (CIF)
- - inter-relations constraints (or, and, xor...)
+ - inter-relations constraints (or, and, xor, inclusion)
  - inheritance with the right symbol (triangle)
- - put online somewhere (user enter graph description and get SVG + SQL)
 
-*Implementation note:* temporary dependency to [underscore](http://underscorejs.org/); good library but used so far only for its shuffle() method.
+*Implementation note:* temporary dependency to [underscore](http://underscorejs.org/); used only for its shuffle() method.
