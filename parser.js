@@ -9,7 +9,7 @@ class ErDiags
 		this.tables = { };
 		this.mcdParsing(description);
 		this.mldParsing();
-		this.output = output || "compact";
+		this.output = output || "graph";
 		this.image = image || "svg";
 	}
 
@@ -403,7 +403,7 @@ class ErDiags
 		mcdDot += '}';
 		if (this.output == "graph") //draw graph in element
 			element.innerHTML = "<img src='scripts/getGraph_" + this.image + ".php?dot=" + encodeURIComponent(mcdDot) + "'/>";
-		else //just show dot input
+		else //output = "text": just show dot input
 			element.innerHTML = mcdDot.replace(/</g,"&lt;").replace(/>/g,"&gt;");
 	}
 
